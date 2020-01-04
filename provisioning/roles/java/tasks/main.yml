@@ -1,0 +1,5 @@
+- name: Install java
+  apt:
+    pkg: default-jdk
+    update_cache: true
+    force: true

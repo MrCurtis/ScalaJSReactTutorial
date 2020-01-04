@@ -1,0 +1,14 @@
+- name: Install nodejs
+  apt:
+    pkg: nodejs
+    state: installed
+    update_cache: true
+- name: Install npm
+  apt:
+    pkg: npm
+    state: installed
+    update_cache: true
+- name: Install source map support for node js
+  npm:
+    name: source-map-support
+    global: true
