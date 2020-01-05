@@ -6,16 +6,24 @@ import org.scalajs.dom
 
 
 object Square {
-  val component = ScalaComponent.builder[Int]("Square")
-    .render_P( i =>
+  case class State(value: String="")
+
+  class Backend(bs: BackendScope[Unit, State]) {
+
+    def render(state: State) =
       <.button(
         ^.cls := "square",
-        i
+        ^.onClick --> bs.setState(State("X")),
+        state.value
       )
-    )
+  }
+
+  val component = ScalaComponent.builder[Unit]("Square")
+    .initialState(State())
+    .renderBackend[Backend]
     .build
 
-    def apply(i: Int) = component(i)
+    def apply(i: Int) = component()
 }
 
 
