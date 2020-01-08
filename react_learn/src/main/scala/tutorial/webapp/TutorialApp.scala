@@ -6,60 +6,81 @@ import org.scalajs.dom
 
 
 object Square {
-  case class State(value: String="")
+  case class Props(value:String, onClick:Callback)
 
-  class Backend(bs: BackendScope[Unit, State]) {
+  class Backend(bs: BackendScope[Props, Unit]) {
 
-    def render(state: State) =
+    def render(props: Props) = {
       <.button(
         ^.cls := "square",
-        ^.onClick --> bs.setState(State("X")),
-        state.value
+        ^.onClick --> props.onClick,
+        props.value
       )
+    }
   }
 
-  val component = ScalaComponent.builder[Unit]("Square")
-    .initialState(State())
+  val component = ScalaComponent.builder[Props]("Square")
     .renderBackend[Backend]
     .build
 
-    def apply(i: Int) = component()
+    def apply(value: Option[String], onClick: Callback) = component(
+      Props(
+        value.getOrElse(""),
+        onClick
+      )
+    )
 }
 
 
 object Board {
-  def renderSquare(i: Int) = Square(i)
+
+  case class State(
+    square:List[Option[String]],
+  )
+
+  class Backend(bs: BackendScope[Unit, State]) {
+
+    def render(state: State) = {
+      val status = "Next player: X"
+      <.div(
+        <.div(
+          ^.cls := "status",
+          status
+        ),
+        <.div(
+          ^.cls := "board-row",
+          renderSquare(state, 0),
+          renderSquare(state, 1),
+          renderSquare(state, 2)
+        ),
+        <.div(
+          ^.cls := "board-row",
+          renderSquare(state, 3),
+          renderSquare(state, 4),
+          renderSquare(state, 5)
+        ),
+        <.div(
+          ^.cls := "board-row",
+          renderSquare(state, 6),
+          renderSquare(state, 7),
+          renderSquare(state, 8)
+        )
+      )
+    }
+
+    def renderSquare(state: State, i: Int) = {
+      Square(
+        state.square(i),
+        handleClick(i)
+      )
+    }
+
+    def handleClick(i: Int) = bs.modState(s => s.copy(square=s.square.updated(i, Some("X"))))
+  }
 
   val component = ScalaComponent.builder[Unit]("Board")
-    .renderStatic(
-      {
-        val status = "Next player: X"
-        <.div(
-          <.div(
-            ^.cls := "status",
-            status,
-          ),
-          <.div(
-            ^.cls := "board-row",
-            renderSquare(0),
-            renderSquare(1),
-            renderSquare(2)
-          ),
-          <.div(
-            ^.cls := "board-row",
-            renderSquare(3),
-            renderSquare(4),
-            renderSquare(5)
-          ),
-          <.div(
-            ^.cls := "board-row",
-            renderSquare(6),
-            renderSquare(7),
-            renderSquare(8)
-          )
-        )
-      }
-    )
+    .initialState(State(List.fill(9)(None)))
+    .renderBackend[Backend]
     .build
 
   def apply() = component()
