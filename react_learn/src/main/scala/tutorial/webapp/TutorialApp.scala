@@ -31,12 +31,13 @@ object Board {
 
   case class State(
     square:List[Option[String]],
+    xIsNext:Boolean
   )
 
   class Backend(bs: BackendScope[Unit, State]) {
 
     def render(state: State) = {
-      val status = "Next player: X"
+      val status = "Next player: " + {if (state.xIsNext) "X" else "O"}
       <.div(
         <.div(
           ^.cls := "status",
@@ -70,11 +71,16 @@ object Board {
       )
     }
 
-    def handleClick(i: Int) = bs.modState(s => s.copy(square=s.square.updated(i, Some("X"))))
+    def handleClick(i: Int) = bs.modState(
+      s => s.copy(
+        square=s.square.updated(i, Some(if (s.xIsNext) "X" else "O")),
+        xIsNext= !s.xIsNext
+      )
+    )
   }
 
   val component = ScalaComponent.builder[Unit]("Board")
-    .initialState(State(List.fill(9)(None)))
+    .initialState(State(List.fill(9)(None), true))
     .renderBackend[Backend]
     .build
 
