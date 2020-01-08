@@ -8,19 +8,14 @@ import org.scalajs.dom
 object Square {
   case class Props(value:String, onClick:Callback)
 
-  class Backend(bs: BackendScope[Props, Unit]) {
-
-    def render(props: Props) = {
+  val component = ScalaComponent.builder[Props]("Square")
+    .render_P(props =>
       <.button(
         ^.cls := "square",
         ^.onClick --> props.onClick,
         props.value
       )
-    }
-  }
-
-  val component = ScalaComponent.builder[Props]("Square")
-    .renderBackend[Backend]
+    )
     .build
 
     def apply(value: Option[String], onClick: Callback) = component(
