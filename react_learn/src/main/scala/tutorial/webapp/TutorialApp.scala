@@ -1,5 +1,10 @@
 package tutorial.webapp
 
+package object webapp {
+  type Squares = List[Option[String]]
+}
+import webapp._
+
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
@@ -29,80 +34,124 @@ object Square {
 
 object Board {
 
+  case class Props(
+    squares: Squares,
+    xIsNext: Boolean,
+    handleClick: Int => Callback,
+  )
+
+  class Backend(bs: BackendScope[Props, Unit]) {
+
+    def render(props: Props) = {
+      <.div(
+        <.div(
+          ^.cls := "board-row",
+          renderSquare(props, 0),
+          renderSquare(props, 1),
+          renderSquare(props, 2)
+        ),
+        <.div(
+          ^.cls := "board-row",
+          renderSquare(props, 3),
+          renderSquare(props, 4),
+          renderSquare(props, 5)
+        ),
+        <.div(
+          ^.cls := "board-row",
+          renderSquare(props, 6),
+          renderSquare(props, 7),
+          renderSquare(props, 8)
+        )
+      )
+    }
+
+    def renderSquare(props: Props, i: Int) = {
+      Square(
+        props.squares(i),
+        props.handleClick(i),
+      )
+    }
+  }
+
+  val component = ScalaComponent.builder[Props]("Board")
+    .renderBackend[Backend]
+    .build
+
+  def apply(squares: Squares, xIsNext: Boolean, handleClick: Int => Callback)
+    = component(Props(squares, xIsNext, handleClick))
+}
+
+
+object Game {
+
   case class State(
-    square:List[Option[String]],
-    xIsNext:Boolean
+    history: List[Squares],
+    xIsNext: Boolean,
   )
 
   class Backend(bs: BackendScope[Unit, State]) {
 
     def render(state: State) = {
-      val status = "Next player: " + {if (state.xIsNext) "X" else "O"}
-      <.div(
-        <.div(
-          ^.cls := "status",
-          status
-        ),
-        <.div(
-          ^.cls := "board-row",
-          renderSquare(state, 0),
-          renderSquare(state, 1),
-          renderSquare(state, 2)
-        ),
-        <.div(
-          ^.cls := "board-row",
-          renderSquare(state, 3),
-          renderSquare(state, 4),
-          renderSquare(state, 5)
-        ),
-        <.div(
-          ^.cls := "board-row",
-          renderSquare(state, 6),
-          renderSquare(state, 7),
-          renderSquare(state, 8)
-        )
-      )
-    }
-
-    def renderSquare(state: State, i: Int) = {
-      Square(
-        state.square(i),
-        handleClick(i)
-      )
-    }
-
-    def handleClick(i: Int) = bs.modState(
-      s => s.copy(
-        square=s.square.updated(i, Some(if (s.xIsNext) "X" else "O")),
-        xIsNext= !s.xIsNext
-      )
-    )
-  }
-
-  val component = ScalaComponent.builder[Unit]("Board")
-    .initialState(State(List.fill(9)(None), true))
-    .renderBackend[Backend]
-    .build
-
-  def apply() = component()
-}
-
-
-object Game {
-  val component = ScalaComponent.builder[Unit]("Game")
-    .renderStatic(
+      val current = state.history.last
+      val status = calculateWinner(current) match {
+        case Some(s) => "Winner is " + s
+        case None => "Next player: " + {if (state.xIsNext) "X" else "O"}
+      }
       <.div(
         ^.cls := "game",
         <.div(
           ^.cls := "game-board",
-          Board(),
+          Board(current, state.xIsNext, handleClick(_)),
         ),
         <.div(
-          <.div(/*Status*/),
+          ^.cls := "game-info",
+          <.div(status),
           <.ol(/* TODO */),
         ),
       )
+    }
+
+    def calculateWinner(squares: Squares) = {
+      val lines = List(
+        List(0,1,2),
+        List(3,4,5),
+        List(6,7,8),
+        List(0,3,6),
+        List(1,4,7),
+        List(2,5,8),
+        List(0,4,8),
+        List(6,4,2),
+      )
+      val winner = lines.map(
+        line => line.map(
+          element => squares(element)
+        )
+      ).filter(
+        _.toSet.size == 1
+      ).filter(
+        ! _(0).isEmpty
+      )
+      if (!winner.isEmpty) winner(0)(0) else None
+    }
+
+    def handleClick(i: Int) = bs.modState(
+      s => {
+        val latest = s.history.last
+        if (!latest(i).isEmpty || !calculateWinner(latest).isEmpty) {
+          s
+        } else {
+          s.copy(
+            history=s.history:+latest.updated(i, Some(if (s.xIsNext) "X" else "O")),
+            xIsNext= !s.xIsNext
+          )
+        }
+      }
     )
+  }
+
+  val component = ScalaComponent.builder[Unit]("Board")
+    .initialState(State(List(List.fill(9)(None)), true))
+    .renderBackend[Backend]
     .build
 
   def apply() = component()
