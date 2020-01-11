@@ -97,6 +97,17 @@ object Game {
         case Some(s) => "Winner is " + s
         case None => "Next player: " + {if (state.xIsNext) "X" else "O"}
       }
+      val moves = state.history.zipWithIndex.map{
+        case (step, move) => {
+          val desc = if (move > 0) "Go to move #%s".format(move) else "Go to game start"
+          <.li(
+            <.button(
+              ^.onClick --> Callback{/* TODO */},
+              desc
+            )
+          )
+        }
+      }
       <.div(
         ^.cls := "game",
         <.div(
@@ -106,7 +117,7 @@ object Game {
         <.div(
           ^.cls := "game-info",
           <.div(status),
-          <.ol(/* TODO */),
+          <.ol(moves.toTagMod),
         ),
       )
     }
