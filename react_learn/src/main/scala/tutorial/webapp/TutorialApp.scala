@@ -86,23 +86,25 @@ object Game {
 
   case class State(
     history: List[Squares],
+    stepNumber: Int,
     xIsNext: Boolean,
   )
 
   class Backend(bs: BackendScope[Unit, State]) {
 
     def render(state: State) = {
-      val current = state.history.last
+      val current = state.history(state.stepNumber)
       val status = calculateWinner(current) match {
         case Some(s) => "Winner is " + s
         case None => "Next player: " + {if (state.xIsNext) "X" else "O"}
       }
-      val moves = state.history.zipWithIndex.map{
+      val moves = state.history.slice(0, state.stepNumber).zipWithIndex.map{
         case (step, move) => {
           val desc = if (move > 0) "Go to move #%s".format(move) else "Go to game start"
           <.li(
+            ^.key := move,
             <.button(
-              ^.onClick --> Callback{/* TODO */},
+              ^.onClick -->  jumpTo(move),
               desc
             )
           )
@@ -147,21 +149,30 @@ object Game {
 
     def handleClick(i: Int) = bs.modState(
       s => {
-        val latest = s.history.last
-        if (!latest(i).isEmpty || !calculateWinner(latest).isEmpty) {
+        val history = s.history.slice(0, s.stepNumber+1)
+        val current = history.last
+        if (!current(i).isEmpty || !calculateWinner(current).isEmpty) {
           s
         } else {
           s.copy(
-            history=s.history:+latest.updated(i, Some(if (s.xIsNext) "X" else "O")),
-            xIsNext= !s.xIsNext
+            history=history:+current.updated(i, Some(if (s.xIsNext) "X" else "O")),
+            xIsNext= !s.xIsNext,
+            stepNumber=history.size
           )
         }
       }
     )
+
+    def jumpTo(step: Int) = bs.modState(
+      s => s.copy(
+        stepNumber=step,
+        xIsNext=step % 2 == 0,
+      )
+    )
   }
 
   val component = ScalaComponent.builder[Unit]("Board")
-    .initialState(State(List(List.fill(9)(None)), true))
+    .initialState(State(List(List.fill(9)(None)), 0, true))
     .renderBackend[Backend]
     .build
 
